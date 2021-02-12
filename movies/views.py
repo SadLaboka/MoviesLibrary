@@ -4,8 +4,9 @@ from django.shortcuts import redirect
 from django.views.generic import ListView, DetailView
 from django.views.generic.base import View
 
-from .models import Movie, Actor, Genre, Rating
+from .models import Movie, Actor, Genre, Rating, Category
 from .forms import ReviewForm, RatingForm
+from .utils import MyMixin
 
 
 class GenreYear():
@@ -17,12 +18,32 @@ class GenreYear():
         return Movie.objects.filter(draft=False).values("year").distinct()
 
 
-class MovieView(GenreYear, ListView):
+class MovieView(MyMixin, GenreYear, ListView):
     """Список фильмов"""
     model = Movie
     context_object_name = 'movies_list'
     queryset = Movie.objects.filter(draft=False)
     paginate_by = 1
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context['title'] = self.get_upper('Главная')
+        return context
+
+
+class CategoryView(MyMixin, ListView):
+    """Список фильмов в категории"""
+    model = Movie
+    context_object_name = 'movies_list'
+    paginate_by = 1
+
+    def get_queryset(self):
+        return Movie.objects.filter(category__slug=self.kwargs['category_slug'], draft=False)
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context['title'] = self.get_upper(Category.objects.get(slug=self.kwargs['category_slug']))
+        return context
 
 
 class MovieDetailView(GenreYear, DetailView):
@@ -96,3 +117,17 @@ class AddStarRating(View):
             return HttpResponse(status=201)
         else:
             return HttpResponse(status=400)
+
+
+class Search(ListView):
+    """Поиск фильмов"""
+    context_object_name = 'movies_list'
+    paginate_by = 1
+
+    def get_queryset(self):
+        return Movie.objects.filter(title__icontains=self.request.GET.get("s"))
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context["s"] = f's={self.request.GET.get("s")}&'
+        return context
