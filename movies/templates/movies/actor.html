@@ -38,6 +38,7 @@
                             {% for movie in actor.film_actor.all %}
                                 <a href="{{ movie.get_absolute_url }}">
                                     {{ movie.title }}
+                                    <br>
                                 </a>
                             {% endfor %}
                         </span>
